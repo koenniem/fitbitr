@@ -27,7 +27,11 @@ get_heart_rate_time_series <- function(token, date="", period="", base_date="", 
   } else{
     stop("You have to specify (date and period) or (base_date and end_date)")
   }
-  tidy_output(get(url, token), simplify)
+  content <- get(url, token)
+  # Ensure intraday isn't there in the case of 1 day period
+  content <- content$`activities-heart`
+
+  tidy_output(content, simplify)
 }
 
 #' @title Get Heart Rate Intraday Time Series
@@ -65,4 +69,34 @@ get_heart_rate_intraday_time_series <- function(token, date="", detail_level="1m
   } else{
     content
   }
+}
+
+get_heart_rate_rest <- function(token, date="", period="", base_date="", end_date="", simplify=TRUE) {
+  url <- if(date != "" && period != ""){
+    paste0(url_heart, sprintf("date/%s/%s.json", format_date(date), period))
+  } else if(base_date != "" & end_date != ""){
+    paste0(url_heart, sprintf("date/%s/%s.json", format_date(base_date), format_date(end_date)))
+  } else{
+    stop("You have to specify (date and period) or (base_date and end_date)")
+  }
+  content <- get(url, token)
+  data.frame(dateTime = content$`activities-heart`$dateTime,
+             restingHeartRate = content$`activities-heart`$value$restingHeartRate)
+}
+
+get_heart_rate_zones <- function(token, date="", period="", base_date="", end_date="", simplify=TRUE) {
+  url <- if(date != "" && period != ""){
+    paste0(url_heart, sprintf("date/%s/%s.json", format_date(date), period))
+  } else if(base_date != "" & end_date != ""){
+    paste0(url_heart, sprintf("date/%s/%s.json", format_date(base_date), format_date(end_date)))
+  } else{
+    stop("You have to specify (date and period) or (base_date and end_date)")
+  }
+  content <- get(url, token)
+
+  content <- mapply(function(x, y) data.frame(x, dateTime = y),
+                    x = content$`activities-heart`$value$heartRateZones,
+                    y = content$`activities-heart`$dateTime,
+                    SIMPLIFY = FALSE)
+  bind_rows(content)
 }
